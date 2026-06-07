@@ -570,11 +570,15 @@ function rResultados(){
   // Projeção de 30 dias a partir da banca atual
   h+=`<div class="wlbl" style="margin-top:1.2rem">📈 Projeção 30 Dias (a partir da banca atual)</div>`;
   let b=S.banca;
+  const nDia=PROFILES[S.profile].n;
   const weeks=['Semana 1 — Dias 1 a 7','Semana 2 — Dias 8 a 14','Semana 3 — Dias 15 a 21','Semana 4 — Dias 22 a 28','Dias 29 e 30'];
-  let projDay=0;
   const projDays=[];
   for(let i=0;i<30;i++){
-    const lucro=ceil5(b*0.2);
+    // lucro do dia = n entradas (total do dia) × valor da entrada calculada sobre a banca do dia
+    const baseD=ceil5(b*0.05);
+    const empateD=ceil5(baseD*0.10);
+    const entryD=ceil5(baseD+empateD);
+    const lucro=entryD*nDia;
     projDays.push({banca:b,lucro,bancaFinal:b+lucro});
     b+=lucro;
   }
