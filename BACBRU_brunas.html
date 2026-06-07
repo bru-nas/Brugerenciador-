@@ -257,7 +257,8 @@ let S = {
   tab: 'inicio',
   diasReais: [],
   sessoesDoDia: [],
-  bancaInicioDia: null
+  bancaInicioDia: null,
+  bancaDia: null
 };
 
 function saveState(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
@@ -284,12 +285,11 @@ function calcDays(){
   return days;
 }
 
-function calcSessao(useCurrentBanca){
+function calcSessao(){
   const p=PROFILES[S.profile];
-  // Usa banca travada para entradas normais, banca atual para extras após red
-  if(!S.bancaSessao) S.bancaSessao=S.banca;
-  const bancaRef=useCurrentBanca?S.banca:S.bancaSessao;
-  const base=ceil5(bancaRef*0.05);
+  // Banca do dia fica travada — só recalcula ao fechar o dia
+  if(S.bancaDia==null) S.bancaDia=S.banca;
+  const base=ceil5(S.bancaDia*0.05);
   const empate=ceil5(base*0.10);
   const entry=ceil5(base+empate);
   const galeBase=ceil5(base*2);
@@ -299,8 +299,9 @@ function calcSessao(useCurrentBanca){
 }
 
 function sessaoResult(){
-  // Banca já foi atualizada em tempo real
-  return S.banca - (S.bancaSessao||S.banca);
+  // Soma os lucros/perdas registrados na sessão atual
+  if(!S.lucros) return 0;
+  return Object.values(S.lucros).reduce((a,v)=>a+v,0);
 }
 
 function selMult(i,m){
@@ -324,7 +325,7 @@ function marcarG(i){
     saveState();render();return;
   }
   const isExtra=i>=(PROFILES[S.profile].n);
-  const {entry,empate,gale,empateGale}=calcSessao(isExtra);
+  const {entry,empate,gale,empateGale}=calcSessao();
   const mult=(S.empateMult||{})[String(i)];
   const tipo=(S.empateTipo||{})[String(i)];
   let lucro=entry; // green normal ganha entrada inteira
@@ -359,7 +360,7 @@ function marcarP(i){
   }
   const reds=S.session.filter(v=>v==='P').length;
   const isExtra=i>=(PROFILES[S.profile].n);
-  const {entry,empate,gale,empateGale}=calcSessao(isExtra);
+  const {entry,empate,gale,empateGale}=calcSessao();
   const perda=entry+empate+gale+empateGale;
   if(reds>=1){
     // Segundo red — stop loss
@@ -369,11 +370,10 @@ function marcarP(i){
     S.banca=Math.max(0,S.banca-perda);
     S.history.unshift({
       date:new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}),
-      result:S.banca-(S.bancaSessao||S.banca),banca:S.banca,
+      result:sessaoResult(),banca:S.banca,
       g:S.session.filter(v=>v==='G').length,p:S.session.filter(v=>v==='P').length
     });
     S.session=new Array(12).fill(null);
-    S.bancaSessao=null;
     S.lucros={};
     S.empateMult={};
     S.empateTipo={};
@@ -396,14 +396,13 @@ function encerrar(){
   const p2=S.session.filter(v=>v==='P').length;
   // Marca início do dia se for a primeira sessão
   if(!S.sessoesDoDia)S.sessoesDoDia=[];
-  if(S.sessoesDoDia.length===0){ S.bancaInicioDia=S.bancaSessao||S.banca; }
+  if(S.sessoesDoDia.length===0){ S.bancaInicioDia=S.bancaDia||S.banca; }
   S.sessoesDoDia.push({ result:result, g:g, p:p2 });
   S.history.unshift({
     date: new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}),
     result: result, banca: S.banca, g: g, p: p2
   });
   S.session=new Array(12).fill(null);
-  S.bancaSessao=null;
   S.lucros={};
   S.empateMult={};
   S.empateTipo={};
@@ -428,6 +427,7 @@ function fecharDia(){
   });
   S.sessoesDoDia=[];
   S.bancaInicioDia=null;
+  S.bancaDia=null;
   saveState();
   alert('📅 Dia '+S.diasReais.length+' fechado!\nLucro do dia: '+fmtS(lucroD)+'\nBanca: '+fmtR(S.banca));
   render();
@@ -439,6 +439,7 @@ function editarBancaDia(){
   const v=parseFloat(novo.replace(',','.'));
   if(isNaN(v)||v<0){ alert('Valor inválido'); return; }
   S.banca=v;
+  S.bancaDia=null;
   saveState();render();
 }
 
@@ -464,7 +465,7 @@ function rInicio(){
     <div class="banca-wrap">
       <label>BANCA</label>
       <input type="number" inputmode="decimal" value="${S.banca}"
-        onchange="S.banca=Math.max(10,parseFloat(this.value)||0);saveState();render()">
+        onchange="S.banca=Math.max(10,parseFloat(this.value)||0);S.bancaDia=null;saveState();render()">
     </div>
     <div class="banca-hint">Atualizada automaticamente ao encerrar sessão · editável</div>
   </div>
@@ -610,7 +611,7 @@ function rResultados(){
 
 // ── SESSÃO ────────────────────────────────────────────────
 function rSessao(){
-  const {entry,empate,gale,empateGale,n}=calcSessao(false);
+  const {entry,empate,gale,empateGale,n}=calcSessao();
   const result=sessaoResult();
   const novaBanca=S.banca;
   const g=S.session.filter(v=>v==='G').length;
@@ -636,7 +637,7 @@ function rSessao(){
     const v=S.session[i];
     const isExtra=i>=n;
     // Entradas extras após red usam banca atual
-    const sessaoI=calcSessao(isExtra);
+    const sessaoI=calcSessao();
     const entry=sessaoI.entry,empate=sessaoI.empate,gale=sessaoI.gale,empateGale=sessaoI.empateGale;
     h+=`<div class="ecard ${v==='G'?'won':v==='P'?'lost':''}" ${isExtra?'style="border-color:rgba(231,76,60,.3)"':''}>
       <div class="etop">
@@ -694,7 +695,7 @@ function rSessao(){
   <button class="enc-btn ${hasAny?'ready':'empty'}" onclick="${hasAny?'encerrar()':'alert(\"Registre ao menos uma entrada.\")'}">
     ${hasAny?'⬛ Encerrar Sessão e Atualizar Banca':'Registre entradas para encerrar'}
   </button>
-  ${hasAny?`<button class="clr-btn" onclick="S.banca=S.bancaSessao||S.banca;S.session=new Array(15).fill(null);S.bancaSessao=null;S.lucros={};S.empateMult={};S.empateTipo={};saveState();render()">Limpar sem salvar</button>`:''}`;
+  ${hasAny?`<button class="clr-btn" onclick="S.session.forEach((v,idx)=>{if(v&&S.lucros&&S.lucros[String(idx)]!=null){S.banca-=S.lucros[String(idx)];}});S.session=new Array(15).fill(null);S.lucros={};S.empateMult={};S.empateTipo={};saveState();render()">Limpar sem salvar</button>`:''}`;
 
   return h;
 }
