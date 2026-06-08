@@ -241,16 +241,16 @@ function unlock(){
 }
 
 const PROFILES = [
-  {n:5, live:5, label:'5 Entradas', sub:'por live', obs:'Máximo de sinais por sessão', color:'#C9A84C'},
   {n:2, live:2, label:'2 Entradas', sub:'por live', obs:'Conservador', color:'#4CAF50'},
-  {n:3, live:3, label:'3 Entradas', sub:'por live', obs:'Moderado', color:'#E67E22'},
-  {n:4, live:4, label:'4 Entradas', sub:'por live', obs:'Arrojado', color:'#E74C3C'},
+  {n:3, live:3, label:'3 Entradas', sub:'por live', obs:'Moderado', color:'#C9A84C'},
+  {n:4, live:4, label:'4 Entradas', sub:'por live', obs:'Arrojado', color:'#E67E22'},
+  {n:5, live:5, label:'5 Entradas', sub:'por live', obs:'Alto risco', color:'#E74C3C'},
 ];
 
 const KEY = 'bacbru_' + NOME.toLowerCase().replace(/\s+/g,'_');
 let S = {
   banca: 500,
-  profile: 0,
+  profile: 3,
   days: new Array(30).fill(false),
   session: new Array(15).fill(null),
   history: [],
@@ -258,7 +258,8 @@ let S = {
   diasReais: [],
   sessoesDoDia: [],
   bancaInicioDia: null,
-  bancaDia: null
+  bancaDia: null,
+  entradasExtras: 0
 };
 
 function saveState(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
@@ -377,6 +378,7 @@ function marcarP(i){
     S.lucros={};
     S.empateMult={};
     S.empateTipo={};
+    S.entradasExtras=0;
     saveState();
     alert('🛑 STOP LOSS ATINGIDO\nSessão encerrada.\nNova banca: R$ '+S.banca.toFixed(2).replace('.',','));
     go('inicio');
@@ -633,7 +635,8 @@ function rSessao(){
 
   const reds=S.session.filter(v=>v==='P').length;
   const nLive=PROFILES[S.profile].n;
-  const totalSlots=reds>=1?nLive+3:nLive;
+  const extras=S.extraEntradas||0;
+  const totalSlots=(reds>=1?nLive+3:nLive)+extras;
   for(let i=0;i<totalSlots;i++){
     const v=S.session[i];
     const isExtra=i>=nLive;
@@ -673,6 +676,9 @@ function rSessao(){
     </div>`;
   }
 
+  h+=`<button onclick="S.entradasExtras=(S.entradasExtras||0)+1;saveState();render()" style="width:100%;margin:.5rem 0;padding:.7rem;background:rgba(201,168,76,.12);border:1px dashed rgba(201,168,76,.4);border-radius:10px;color:#C9A84C;font-weight:600;font-size:.8rem;cursor:pointer">➕ Adicionar mais 1 entrada</button>`;
+
+    h+=`<button onclick="S.extraEntradas=(S.extraEntradas||0)+1;saveState();render()" style="width:100%;padding:.7rem;margin:.3rem 0 .9rem;background:rgba(201,168,76,.12);border:1px dashed rgba(201,168,76,.4);border-radius:10px;color:#C9A84C;font-weight:600;font-size:.8rem;cursor:pointer">+ 1 Entrada</button>`;
   h+=`
   <div class="rgrid">
     <div class="rcard">
@@ -696,7 +702,7 @@ function rSessao(){
   <button class="enc-btn ${hasAny?'ready':'empty'}" onclick="${hasAny?'encerrar()':'alert(\"Registre ao menos uma entrada.\")'}">
     ${hasAny?'⬛ Encerrar Sessão e Atualizar Banca':'Registre entradas para encerrar'}
   </button>
-  ${hasAny?`<button class="clr-btn" onclick="S.session.forEach((v,idx)=>{if(v&&S.lucros&&S.lucros[String(idx)]!=null){S.banca-=S.lucros[String(idx)];}});S.session=new Array(15).fill(null);S.lucros={};S.empateMult={};S.empateTipo={};saveState();render()">Limpar sem salvar</button>`:''}`;
+  ${hasAny?`<button class="clr-btn" onclick="S.session.forEach((v,idx)=>{if(v&&S.lucros&&S.lucros[String(idx)]!=null){S.banca-=S.lucros[String(idx)];}});S.session=new Array(15).fill(null);S.lucros={};S.empateMult={};S.empateTipo={};S.entradasExtras=0;saveState();render()">Limpar sem salvar</button>`:''}`;
 
   return h;
 }
