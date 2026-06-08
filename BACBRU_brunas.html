@@ -241,10 +241,10 @@ function unlock(){
 }
 
 const PROFILES = [
-  {n:6, live:2, label:'6 Entradas', sub:'2 por live', obs:'Melhor opção para gerenciamento', color:'#C9A84C'},
-  {n:9, live:3, label:'9 Entradas', sub:'3 por live', obs:'Ponto de atenção', color:'#E67E22'},
-  {n:12,live:4, label:'12 Entradas',sub:'4 por live', obs:'Apostador arrojado, risco maior', color:'#E74C3C'},
-  {n:15,live:5, label:'15 Entradas',sub:'5 por live', obs:'Alto risco, não indicado', color:'#8E0000'},
+  {n:5, live:5, label:'5 Entradas', sub:'por live', obs:'Padrão recomendado', color:'#C9A84C'},
+  {n:3, live:3, label:'3 Entradas', sub:'por live', obs:'Conservador', color:'#4CAF50'},
+  {n:4, live:4, label:'4 Entradas', sub:'por live', obs:'Moderado', color:'#E67E22'},
+  {n:6, live:6, label:'6 Entradas', sub:'por live', obs:'Arrojado', color:'#E74C3C'},
 ];
 
 const KEY = 'bacbru_' + NOME.toLowerCase().replace(/\s+/g,'_');
@@ -324,7 +324,7 @@ function marcarG(i){
     S.session[i]=null;
     saveState();render();return;
   }
-  const isExtra=i>=(PROFILES[S.profile].n);
+  const isExtra=i>=5;
   const {entry,empate,gale,empateGale}=calcSessao();
   const mult=(S.empateMult||{})[String(i)];
   const tipo=(S.empateTipo||{})[String(i)];
@@ -359,7 +359,7 @@ function marcarP(i){
     saveState();render();return;
   }
   const reds=S.session.filter(v=>v==='P').length;
-  const isExtra=i>=(PROFILES[S.profile].n);
+  const isExtra=i>=5;
   const {entry,empate,gale,empateGale}=calcSessao();
   const perda=entry+empate+gale+empateGale;
   if(reds>=1){
@@ -632,10 +632,11 @@ function rSessao(){
   </div>`;
 
   const reds=S.session.filter(v=>v==='P').length;
-  const totalSlots=reds>=1?n+3:n;
+  const FIXO=5;
+  const totalSlots=reds>=1?FIXO+3:FIXO;
   for(let i=0;i<totalSlots;i++){
     const v=S.session[i];
-    const isExtra=i>=n;
+    const isExtra=i>=FIXO;
     // Entradas extras após red usam banca atual
     const sessaoI=calcSessao();
     const entry=sessaoI.entry,empate=sessaoI.empate,gale=sessaoI.gale,empateGale=sessaoI.empateGale;
