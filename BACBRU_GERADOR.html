@@ -86,49 +86,31 @@ function gerar(){
   const nome=document.getElementById('nome').value.trim();
   const senha=document.getElementById('senha').value.trim();
   const msg=document.getElementById('msg'),btn=document.getElementById('btn');
-  if(!nome){msg.className='err';msg.textContent='⚠  Preencha o nome do assinante';return}
-  if(!senha){msg.className='err';msg.textContent='⚠  Defina uma senha';return}
+  if(!nome){msg.className='err';msg.textContent='\u26A0  Preencha o nome do assinante';return}
+  if(!senha){msg.className='err';msg.textContent='\u26A0  Defina uma senha';return}
   msg.className='ld';msg.textContent='Gerando...';btn.disabled=true;
   try{
     const enc=btoa(unescape(encodeURIComponent(senha)));
-    const safe=nome.replace(/\/g,'\\').replace(/"/g,'\"');
+    const safe=nome.replace(/[\\"]/g,'');
     let html=b64Dec(TPL)
       .replaceAll('%%LOGO%%',LOGO)
       .replace('%%NOME%%',safe)
       .replace('%%SENHA%%',enc);
     const safe2=nome.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
     const fname='BACBRU_'+safe2+'.html';
-    // Salva o HTML em textarea para copiar e jogar no GitHub
-    document.getElementById('output-area').style.display='block';
-    document.getElementById('output-fname').textContent=fname;
-    document.getElementById('output-code').value=html;
+    // Baixa o arquivo direto
+    const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=fname;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
     msg.className='ok';
-    msg.innerHTML='✅ <strong>'+fname+'</strong> pronto! Copie o código abaixo e salve como <strong>'+fname+'</strong>';
-    // Tenta download também
-    try{
-      const blob=new Blob([html],{type:'text/html;charset=utf-8'});
-      const reader=new FileReader();
-      reader.onload=function(){
-        const a=document.createElement('a');
-        a.href=reader.result;
-        a.download=fname;
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(()=>{document.body.removeChild(a);},1000);
-      };
-      reader.readAsDataURL(blob);
-    }catch(e2){}
+    msg.innerHTML='\u2705 <strong>'+fname+'</strong> baixado! Suba no GitHub.';
   }catch(e){
     msg.className='err';msg.textContent='Erro: '+e.message;console.error(e);
   }finally{btn.disabled=false;}
 }
-</script>
-
-<div id="output-area" style="display:none;margin-top:1.5rem;padding:1rem;background:#0a1929;border:1px solid rgba(201,168,76,.3);border-radius:14px;">
-  <div style="font-size:.7rem;color:#C9A84C;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.5rem">Arquivo: <strong id="output-fname"></strong></div>
-  <div style="font-size:.72rem;color:#7A9BB5;margin-bottom:.7rem">Copie tudo abaixo → salve como o nome acima → jogue no GitHub:</div>
-  <textarea id="output-code" onclick="this.select();document.execCommand('copy');alert('Copiado!')" style="width:100%;height:160px;background:#081220;border:1px solid rgba(201,168,76,.2);border-radius:8px;color:#7A9BB5;font-size:.55rem;padding:.6rem;font-family:monospace;box-sizing:border-box" readonly placeholder="HTML do assinante aparece aqui..."></textarea>
-  <button onclick="document.getElementById('output-code').select();document.execCommand('copy');alert('Copiado!')" style="margin-top:.6rem;width:100%;padding:.8rem;background:#C9A84C;color:#000;border:none;border-radius:10px;font-weight:700;font-size:.85rem;cursor:pointer">📋 COPIAR TUDO</button>
-</div>
-</body>
-</html>
+>
