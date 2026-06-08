@@ -241,10 +241,10 @@ function unlock(){
 }
 
 const PROFILES = [
-  {n:5, live:5, label:'5 Entradas', sub:'por live', obs:'Padrão recomendado', color:'#C9A84C'},
-  {n:3, live:3, label:'3 Entradas', sub:'por live', obs:'Conservador', color:'#4CAF50'},
-  {n:4, live:4, label:'4 Entradas', sub:'por live', obs:'Moderado', color:'#E67E22'},
-  {n:6, live:6, label:'6 Entradas', sub:'por live', obs:'Arrojado', color:'#E74C3C'},
+  {n:5, live:5, label:'5 Entradas', sub:'por live', obs:'Máximo de sinais por sessão', color:'#C9A84C'},
+  {n:2, live:2, label:'2 Entradas', sub:'por live', obs:'Conservador', color:'#4CAF50'},
+  {n:3, live:3, label:'3 Entradas', sub:'por live', obs:'Moderado', color:'#E67E22'},
+  {n:4, live:4, label:'4 Entradas', sub:'por live', obs:'Arrojado', color:'#E74C3C'},
 ];
 
 const KEY = 'bacbru_' + NOME.toLowerCase().replace(/\s+/g,'_');
@@ -324,7 +324,7 @@ function marcarG(i){
     S.session[i]=null;
     saveState();render();return;
   }
-  const isExtra=i>=5;
+  const isExtra=i>=PROFILES[S.profile].n;
   const {entry,empate,gale,empateGale}=calcSessao();
   const mult=(S.empateMult||{})[String(i)];
   const tipo=(S.empateTipo||{})[String(i)];
@@ -359,7 +359,7 @@ function marcarP(i){
     saveState();render();return;
   }
   const reds=S.session.filter(v=>v==='P').length;
-  const isExtra=i>=5;
+  const isExtra=i>=PROFILES[S.profile].n;
   const {entry,empate,gale,empateGale}=calcSessao();
   const perda=entry+empate+gale+empateGale;
   if(reds>=1){
@@ -579,7 +579,7 @@ function rResultados(){
     const baseD=ceil5(b*0.05);
     const empateD=ceil5(baseD*0.10);
     const entryD=ceil5(baseD+empateD);
-    const lucro=entryD*nDia;
+    const lucro=entryD*nDia*3;
     projDays.push({banca:b,lucro,bancaFinal:b+lucro});
     b+=lucro;
   }
@@ -632,11 +632,11 @@ function rSessao(){
   </div>`;
 
   const reds=S.session.filter(v=>v==='P').length;
-  const FIXO=5;
-  const totalSlots=reds>=1?FIXO+3:FIXO;
+  const nLive=PROFILES[S.profile].n;
+  const totalSlots=reds>=1?nLive+3:nLive;
   for(let i=0;i<totalSlots;i++){
     const v=S.session[i];
-    const isExtra=i>=FIXO;
+    const isExtra=i>=nLive;
     // Entradas extras após red usam banca atual
     const sessaoI=calcSessao();
     const entry=sessaoI.entry,empate=sessaoI.empate,gale=sessaoI.gale,empateGale=sessaoI.empateGale;
