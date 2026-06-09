@@ -229,9 +229,25 @@ document.getElementById('lk-sub').textContent = 'Bem-vindo, ' + NOME;
 document.getElementById('hdr-nm').textContent = NOME;
 document.getElementById('pwd').addEventListener('keydown', e => { if(e.key==='Enter') unlock(); });
 
+function getDeviceId(){
+  let id=localStorage.getItem('BACBRU_DEVICE');
+  if(!id){ id='dev_'+Date.now()+'_'+Math.random().toString(36).slice(2,10); localStorage.setItem('BACBRU_DEVICE',id); }
+  return id;
+}
 function unlock(){
   const v = document.getElementById('pwd').value;
   if(btoa(unescape(encodeURIComponent(v))) === SENHA_ENC){
+    // Trava por dispositivo
+    const deviceId=getDeviceId();
+    const registrado=localStorage.getItem('BACBRU_LOCK_'+NOME);
+    if(!registrado){
+      // Primeiro acesso: registra este dispositivo
+      localStorage.setItem('BACBRU_LOCK_'+NOME, deviceId);
+    } else if(registrado!==deviceId){
+      // Outro dispositivo tentando acessar
+      document.getElementById('lk-err').textContent='⛔ Esta planilha já está vinculada a outro dispositivo.';
+      return;
+    }
     document.getElementById('lock').style.display='none';
     document.getElementById('app').classList.add('on');
     loadState(); S.tab='inicio'; render();
@@ -366,16 +382,20 @@ function marcarP(i){
     S.session[i]=null;
     saveState();render();return;
   }
-  const reds=S.session.filter(v=>v==='P').length;
-  const isExtra=i>=PROFILES[S.profile].n;
   const {entry,empate,gale,empateGale}=calcSessao();
   const perda=entry+empate+gale+empateGale;
-  if(reds>=1){
-    // Segundo red — stop loss
-    S.session[i]='P';
-    if(!S.lucros)S.lucros={};
-    S.lucros[String(i)]=-perda;
-    S.banca=Math.max(0,S.banca-perda);
+  // Saldo da sessão ANTES deste loss
+  const saldoAntes=sessaoResult();
+  // Aplica o loss
+  S.session[i]='P';
+  if(!S.lucros)S.lucros={};
+  S.lucros[String(i)]=-perda;
+  S.banca=Math.max(0,S.banca-perda);
+  // Saldo da sessão DEPOIS deste loss
+  const saldoDepois=saldoAntes-perda;
+  // STOP LOSS: só dispara se já estava negativo antes deste loss
+  // (ou seja, tomou loss enquanto ainda não tinha recuperado o red anterior)
+  if(saldoAntes<0){
     S.history.unshift({
       date:new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}),
       result:sessaoResult(),banca:S.banca,
@@ -387,14 +407,11 @@ function marcarP(i){
     S.empateTipo={};
     S.entradasExtras=0;
     saveState();
-    alert('🛑 STOP LOSS ATINGIDO\nSessão encerrada.\nNova banca: R$ '+S.banca.toFixed(2).replace('.',','));
+    alert('🛑 STOP LOSS ATINGIDO\nVocê tomou um loss enquanto ainda estava negativo.\nSessão encerrada.\nNova banca: R$ '+S.banca.toFixed(2).replace('.',','));
     go('inicio');
     return;
   }
-  S.session[i]='P';
-  if(!S.lucros)S.lucros={};
-  S.lucros[String(i)]=-perda;
-  S.banca=Math.max(0,S.banca-perda);
+  // Saldo ainda >= 0 ou ficou negativo agora (primeiro red): continua, libera +3 entradas
   saveState();render();
 }
 function encerrar(){
@@ -643,7 +660,7 @@ function rSessao(){
   const reds=S.session.filter(v=>v==='P').length;
   const nLive=PROFILES[S.profile].n;
   const extras=S.entradasExtras||0;
-  const totalSlots=(reds>=1?nLive+3:nLive)+extras;
+  const totalSlots=nLive+(reds*3)+extras;
   for(let i=0;i<totalSlots;i++){
     const v=S.session[i];
     const isExtra=i>=nLive;
