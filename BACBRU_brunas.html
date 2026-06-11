@@ -341,7 +341,7 @@ function marcarG(i){
   const {entry,empate,gale,empateGale}=calcSessao();
   const mult=(S.empateMult||{})[String(i)];
   const tipo=(S.empateTipo||{})[String(i)];
-  let lucro=entry; // green normal ganha entrada inteira
+  let lucro=entry-empate; // green normal = entrada menos empate
   if(mult&&tipo){
     if(tipo==='Seco'){
       const inp=document.getElementById('empval-'+i);
@@ -594,7 +594,7 @@ function rResultados(){
     const baseD=ceil5(b*0.05);
     const empateD=ceil5(baseD*0.10);
     const entryD=ceil5(baseD+empateD);
-    const lucro=entryD*nDia*3;
+    const lucro=(entryD-empateD)*nDia*3;
     projDays.push({banca:b,lucro,bancaFinal:b+lucro});
     b+=lucro;
   }
